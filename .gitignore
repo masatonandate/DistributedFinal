@@ -1,8 +1,7 @@
-*
-
-!*.gitignore
-!*.scala
-!*.sbt
-!*.csv
-!*.md
-!*.txt
+/*
+/*/
+.DS_Store
+!/FinalProject
+/FinalProject/*
+!/FinalProject/src
+!/FinalProject/*.csv
