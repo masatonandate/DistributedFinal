@@ -1,0 +1,8 @@
+*
+
+!*.gitignore
+!*.scala
+!*.sbt
+!*.csv
+!*.md
+!*.txt
