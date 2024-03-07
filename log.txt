@@ -1,0 +1,1 @@
+Jonathan - Changed Spark context to session and started class definitions/reading of dateframe/entropy helpers
