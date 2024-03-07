@@ -22,6 +22,14 @@ object FinalProject {
     val df = spark.read.option("header", "true").option("inferSchema", "true").csv("adult.csv")
     df.show()
     df.printSchema()
+    val cols = df.columns
+    // How to read a column in spark df
+    df.rdd.map(row => List(row.getAs[Int]("age"))).take(10).foreach(println)
+
+    val test = spark.sparkContext.parallelize(List(0.1, 0.2, 0.3))
+    val decisionTree = DecisionTree(sc = spark.sparkContext)
+    print(decisionTree._entropy(test))
+    
     //    val conf = new SparkConf().setAppName("FinalProject")
     //      .setMaster("local[4]")
     //    val sc = new SparkContext(conf)
