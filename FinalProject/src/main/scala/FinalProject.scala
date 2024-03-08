@@ -1,7 +1,6 @@
 import org.apache.spark.SparkContext._
 import scala.io._
 import org.apache.spark.{ SparkConf, SparkContext }
-import org.apache.spark.sql._
 import org.apache.spark.rdd._
 import org.apache.log4j.Logger
 import org.apache.log4j.Level
@@ -30,8 +29,6 @@ object FinalProject {
     val test = df.rdd
     val decisionTree = DecisionTree()//sc = spark.sparkContext)
 
-    // AFAIK SPLIT WORKS
-    //print(decisionTree._partition_entropy(decisionTree._split(test, " workclass").map(x => x.map(y => y.getAs[String](" income")))))//.take(1).foreach(println)
    val bestTestSplit = decisionTree._find_best_split(test)
     bestTestSplit._1.collect().foreach(println)
     println(bestTestSplit._2)
@@ -46,5 +43,4 @@ object FinalProject {
     
 
   }
-
 }

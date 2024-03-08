@@ -1,6 +1,5 @@
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{DataFrame, Row}
 
 import scala.math.{log, random}
 //Decision tree class holding functions to train and inference on the model
