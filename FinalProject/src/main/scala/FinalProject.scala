@@ -17,7 +17,9 @@ object FinalProject {
       .master("local")
       .appName("FinalProject")
       .config("spark.some.config.option", "some-value")
-      .getOrCreate()
+      .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer") .config("spark.kryoserializer.buffer", "1024k") .config("spark.kryoserializer.buffer.max", "1024m") //.config("spark.kryo.registrationRequired", "true")
+  .getOrCreate()
+
 
     val df = spark.read.option("header", "true").option("inferSchema", "true").csv("adult.csv")
     df.show()
@@ -25,10 +27,18 @@ object FinalProject {
     val cols = df.columns
     // How to read a column in spark df
     df.rdd.map(row => List(row.getAs[Int]("age"))).take(10).foreach(println)
+    val test = df.rdd
+    val decisionTree = DecisionTree()//sc = spark.sparkContext)
 
-    val test = spark.sparkContext.parallelize(List(0.1, 0.2, 0.3))
-    val decisionTree = DecisionTree(sc = spark.sparkContext)
-    print(decisionTree._entropy(test))
+    // AFAIK SPLIT WORKS
+    //print(decisionTree._partition_entropy(decisionTree._split(test, " workclass").map(x => x.map(y => y.getAs[String](" income")))))//.take(1).foreach(println)
+   val bestTestSplit = decisionTree._find_best_split(test)
+    bestTestSplit._1.collect().foreach(println)
+    println(bestTestSplit._2)
+    println(bestTestSplit._3)
+    //val testEnt = spark.sparkContext.parallelize(List(List("1", "2", "1"), List("1", "2", "1", "2")))
+   // print(decisionTree._data_entropy(testEnt))
+    //print(decisionTree._partition_entropy(testEnt))
     
     //    val conf = new SparkConf().setAppName("FinalProject")
     //      .setMaster("local[4]")
