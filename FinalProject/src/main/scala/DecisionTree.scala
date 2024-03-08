@@ -7,31 +7,23 @@ import scala.math.{log, random}
 
 case class DecisionTree(maxDepth : Int = 4, minSamplesLeaf: Int = 1,
                         minInformationGain: Double = 0.0, numOfFeaturesSplitting : String = "all",
-      amtOfSay :  Double = -0.0//, sc : SparkContext
-                       )  {
+                        amtOfSay :  Double = -0.0, columnLabels: List[String])
+{
 
-  val _entropy = (classProbs: List[Double])=> {
+  private val _entropy = (classProbs: List[Double]) => {
     classProbs.filter(_ > 0).reduce((x, y) => x + -y * log(y) / log(2))
   }
 
-//  val _classProbs = (labels: RDD[String]) => {
-//    val rddSize = labels.count()
-//    this.sc.parallelize(labels.countByValue().map({ case (label, count) => count * 1.0 / rddSize }).toList)
-//  }
-  val _classProbs = (labels: List[String]) => {
+  private val _classProbs = (labels: List[String]) => {
     val rddSize = labels.size
     labels.groupBy(identity).mapValues(_.size).map({case (x, count) => count * 1.0 / rddSize}).toList
   }
 
-//  val _data_entropy = (labels: RDD[String]) => {
-//    _entropy(_classProbs(labels))
-//  }
-val _data_entropy = (labels: List[String]) => {
-  _entropy(_classProbs(labels))
-}
+  private val _data_entropy = (labels: List[String]) => {
+    _entropy(_classProbs(labels))
+  }
 
   //Gets Entropy
-//  def _partition_entropy(subsets: RDD[List[String]]): Double = {
 //    subsets.persist
 //    val totalCount = subsets.flatMap(x => x).count
 //    val weighted_entropies = subsets.map(lst => _data_entropy(sc.parallelize(lst)) * lst.length / totalCount).reduce((x, y) => x + y)
@@ -49,17 +41,18 @@ val _data_entropy = (labels: List[String]) => {
   //Input: Column of DataFrame
   def _split(rows: RDD[Adult], featureIdx: String): RDD[List[Adult]] = {
     val splits = rows.map(x => (x.getFeatureAsString(featureIdx), x))
-    val groups = splits.groupByKey().map({ case (key, list) => list.toList })
+    val groups = splits.groupByKey().map({ case (columnIdx, adults) => adults.toList })
     groups
   }
 
-  // 
-  def _find_best_split(data: RDD[Adult]): (RDD[List[Row]], String, Double) = {
-    val featuresToUse = data.first.getFeatures.filter(feature => feature != "income")
-    val entropies = featuresToUse.map(feature => (feature, _split(data, feature))) // .collect(), case (feature, Array(value, List[Row]))
-      .map({ case (feature, split) => (split, feature, _partition_entropy(split.map(lst => lst.map(x => x.getAs[String]("income"))))) })
-    val sortedEnt = entropies.sortBy({ case (split, feature, entropy) => entropy })//.take(0)(0) // //              ^ List[Row] ^ Row
-  sortedEnt(0)
+  // Takes in DataFrame of Adult entries, and returns the RDD of List of adults grouped by the values in columnIdx, columnIdx, and entropy value
+  def _find_best_split(data: RDD[Adult]): (RDD[List[Adult]], String, Double) = {
+    val entropies = columnLabels.map(feature => (feature, _split(data, feature)))
+      .map{
+        case (feature, split) => (split, feature, _partition_entropy(split.map(rows => rows.map(adult => adult.getFeatureAsString("income")))))
+      }
+    val sortedEnt = entropies.sortBy({ case (split, feature, entropy) => entropy })
+  sortedEnt.head
   }
 
   // (feature: String, Array(value: String, rows: List[Row]))
@@ -73,12 +66,12 @@ val _data_entropy = (labels: List[String]) => {
   def _create_tree(data: RDD[Adult], current_depth: Integer): //= {
   Unit = {
     if (current_depth > maxDepth) {
-      return null
+      return
     }
 
 
     val (rows, featureIdx, entropy) = _find_best_split(data)
-    val labelProbs = _find_label_probs(data.map(lst => lst.getAs[String]("income")))
+    val labelProbs = _find_label_probs(data.map(_.getFeatureAsString("income")))
 
     //    """
     //        Recursive, depth first tree creation algorithm
