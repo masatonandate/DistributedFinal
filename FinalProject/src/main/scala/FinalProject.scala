@@ -11,36 +11,20 @@ object FinalProject {
   def main(args: Array[String]): Unit = {
     Logger.getLogger("org").setLevel(Level.OFF)
     Logger.getLogger("akka").setLevel(Level.OFF)
-    // Setup Spark session for interaction with Dataset API
-    val spark = SparkSession.builder
-      .master("local")
-      .appName("FinalProject")
-      .config("spark.some.config.option", "some-value")
-      .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer") .config("spark.kryoserializer.buffer", "1024k") .config("spark.kryoserializer.buffer.max", "1024m") //.config("spark.kryo.registrationRequired", "true")
-  .getOrCreate()
-
-
-    val df = spark.read.option("header", "true").option("inferSchema", "true").csv("adult.csv")
-    df.show()
-    df.printSchema()
-    val cols = df.columns
-    // How to read a column in spark df
-    df.rdd.map(row => List(row.getAs[Int]("age"))).take(10).foreach(println)
-    val test = df.rdd
-    val decisionTree = DecisionTree()//sc = spark.sparkContext)
+        val conf = new SparkConf().setAppName("FinalProject")
+          .setMaster("local[4]")
+        val sc = new SparkContext(conf)
+  
+    // Read in the CSV, key=rowNumber, val=Adult object (which is row)
+    val data = sc.textFile("adult.data").map(_.split(","))
+      .map(x => (x(0).toInt, Adult(x(1).toInt, x(2), x(3).toInt, x(4), x(5).toInt, x(6), x(7), x(8), x(9), x(10), x(11).toInt, x(12).toInt, x(13).toInt, x(14), x(15))))
+    
+    val decisionTree = DecisionTree()
 
    val bestTestSplit = decisionTree._find_best_split(test)
     bestTestSplit._1.collect().foreach(println)
     println(bestTestSplit._2)
     println(bestTestSplit._3)
-    //val testEnt = spark.sparkContext.parallelize(List(List("1", "2", "1"), List("1", "2", "1", "2")))
-   // print(decisionTree._data_entropy(testEnt))
-    //print(decisionTree._partition_entropy(testEnt))
-    
-    //    val conf = new SparkConf().setAppName("FinalProject")
-    //      .setMaster("local[4]")
-    //    val sc = new SparkContext(conf)
-    
 
   }
 }

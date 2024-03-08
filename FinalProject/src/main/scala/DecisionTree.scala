@@ -47,15 +47,15 @@ val _data_entropy = (labels: List[String]) => {
   //this function splits the data frame based on feature_idx (column_idx)
   //Assuming that we are only using categorical variables, we will return splits based on distinct categories
   //Input: Column of DataFrame
-  def _split(data: RDD[Row], featureIdx: String): RDD[List[Row]] = {
-    val splits = data.map(row => (row.getAs[String](featureIdx), row))
+  def _split(rows: RDD[Adult], featureIdx: String): RDD[List[Adult]] = {
+    val splits = rows.map(x => (x.getFeatureAsString(featureIdx), x))
     val groups = splits.groupByKey().map({ case (key, list) => list.toList })
     groups
   }
 
   // 
-  def _find_best_split(data: RDD[Row]): (RDD[List[Row]], String, Double) = {
-    val featuresToUse = data.first.schema.fieldNames.filter(feature => feature != "income")
+  def _find_best_split(data: RDD[Adult]): (RDD[List[Row]], String, Double) = {
+    val featuresToUse = data.first.getFeatures.filter(feature => feature != "income")
     val entropies = featuresToUse.map(feature => (feature, _split(data, feature))) // .collect(), case (feature, Array(value, List[Row]))
       .map({ case (feature, split) => (split, feature, _partition_entropy(split.map(lst => lst.map(x => x.getAs[String]("income"))))) })
     val sortedEnt = entropies.sortBy({ case (split, feature, entropy) => entropy })//.take(0)(0) // //              ^ List[Row] ^ Row
@@ -70,7 +70,7 @@ val _data_entropy = (labels: List[String]) => {
     labelCounts.map(_._2 / totalCount.toDouble)
   }
 
-  def _create_tree(data: RDD[Row], current_depth: Integer): //= {
+  def _create_tree(data: RDD[Adult], current_depth: Integer): //= {
   Unit = {
     if (current_depth > maxDepth) {
       return null
