@@ -2,7 +2,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 
 
-case class NewTreeNode(data : RDD[Array[String]], feature_idx : String, label_probabilities : List[Double], information_gain :Double){
+case class NewTreeNode(data : RDD[Array[String]], featureName: String, featureIdx: Int, label_probabilities : List[Double], information_gain :Double){
     /*Data Structure that contains information about a certain tree node.
      Note: When extracting featureVals, need to make splits and featureVals are in same order
      May have to put featureVals and splits together*/
