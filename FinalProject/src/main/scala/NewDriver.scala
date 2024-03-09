@@ -17,22 +17,48 @@ object NewDriver {
 
     val text = sc.textFile("adult.csv")
     val header = text.first()
-    val values = text.filter(line => line != header).map(line => line.split(","))
+    val values = text.filter(line => line != header)
+      .map(line => line.split(","))
 
     //Splitting Training and Testing (80/20)
     val training = values.sample(withReplacement=false, fraction=0.8)
     val testing = values.subtract(training)
+    //getting the answers
+    val testAnswers = testing.map(row => (row(0), row(row.length - 1)))
 
     // (featureName, featureIdx)
-    val featureNames = Array(("workclass", 1), ("education", 3), ("marital-status", 5))
+    val featureNames = Array(("workclass", 2), ("education", 4), ("marital-status", 6), ("race", 9), ("native-country", 14))
 
     //Build tree on train Data
-    val decisionTree = NewDecisionTree()
-    decisionTree.create_tree(training, 0,featureNames, null)
+    val decisionTree = NewDecisionTree(maxDepth = 5)
+    val parentNode = decisionTree.create_tree(training, 0, featureNames, null)
 
     //Feed Test Data into Tree and get Results
+    val testOutput = testing.map(x => (x(0), decisionTree.evaluate(x, parentNode)))
+
+    //computing F-Score
+    val joinedAnsOut = testAnswers.join(testOutput)
+//    joinedAnsOut.collect().foreach(println)
+    val tp = joinedAnsOut
+      .filter({case (rownum, (actual, predicted)) => actual == predicted && actual == ">50k"}).collect().length
+    val fp = joinedAnsOut
+      .filter({case (rownum, (actual, predicted)) => actual != predicted && predicted == ">50k"}).collect().length
+    val fn = joinedAnsOut
+      .filter({case (rownum, (actual, predicted)) => actual != predicted && predicted != ">50k"}).collect().length
+
+    val precision = tp.toDouble / (tp + fp)
+    val recall = tp.toDouble / (tp + fn)
+
+    val fscore = 2 * (precision * recall) / (precision + recall)
+    println(fscore, precision, recall, tp, fp, fn)
+
+//    val fn = testAnswers.subtract(testOutput)
+//    println(fn.collect().length)
+
+
+
     //decisionTree.evaluate()
-    decisionTree.recursive_print(decisionTree.create_tree(values, 0,featureNames, null))
+    //decisionTree.recursive_print(decisionTree.create_tree(values, 0,featureNames, null))
     //Evaluate F1 Score
 
   }

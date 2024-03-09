@@ -5,7 +5,7 @@ import scala.math.log
 //Decision tree class holding functions to train and inference on the model
 
 
-case class NewDecisionTree(maxDepth : Int = 4, minSamplesLeaf: Int = 1,
+case class NewDecisionTree(maxDepth : Int = 3, minSamplesLeaf: Int = 1,
                            minInformationGain: Double = 0.0, numOfFeaturesSplitting : String = "all",
                            amtOfSay :  Double = -0.0 //, sc : SparkContext
                        )  {
@@ -36,21 +36,17 @@ case class NewDecisionTree(maxDepth : Int = 4, minSamplesLeaf: Int = 1,
   }
 
   // Given split, finds class entropy
-  def findClassEntropy(labels: RDD[Array[String]]): (List[Double], Double) = {
+  def findClassEntropy(labels: RDD[Array[String]]): (List[(String, Double)], Double) = {
     val rddSize = labels.count()
-    val label_probs = labels.map(x => x(x.length - 1)).countByValue().map({ case (label, count) => count * 1.0 / rddSize }).toList
-    (label_probs, label_probs.map(prob => -prob * math.log(prob)).sum)
+    val label_probs = labels.map(x => x(x.length - 1)).countByValue().map({ case (label, count) => (label, count * 1.0 / rddSize) }).toList
+    (label_probs, label_probs.map({ case (label, prob) => -prob * math.log(prob) }).sum)
   }
 
   def create_tree(data: RDD[Array[String]], currentDepth: Int, features : Array[(String, Int)], parent: String): NewTreeNode = {
-    println()
-    println(parent)
     if (currentDepth > maxDepth || features.length==0 || data.count() == 0) {
       return null
     }
     val splitResult = getBestSplit(data, features)
-
-    splitResult._2._1.foreach(x => println(x._1))
 
     val parentEntropyAndProbs = findClassEntropy(data)
 
@@ -88,18 +84,16 @@ case class NewDecisionTree(maxDepth : Int = 4, minSamplesLeaf: Int = 1,
     }
   }
 
-//  def evaluate(testRow: Array[String], node: NewTreeNode): String = {
-//    //base case
-//
-//    //for a row in testData, traverseTree
-//    val newNode = node.children.filter({case (featVal, childNode) => testRow(node.featureIdx) == childNode.featureName})
-//
-//
-//
-//  }
+  def evaluate(testRow: Array[String], node: NewTreeNode): String = {
+    val newNode = node.children.filter({case (featVal, childNode) => testRow(node.featureIdx) == childNode.featureName})
+    // Base case when we reach a leaf
+    if (node.children == null || node.children.length == 0 || newNode.length == 0) {
+      return node.mostLikelyLabel
+    }
 
-
-
+    //for a row in testData, traverseTree
+    evaluate(testRow, newNode(0)._2)
+  }
 }
 
 
