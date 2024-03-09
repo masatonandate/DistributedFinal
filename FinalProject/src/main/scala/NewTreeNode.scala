@@ -1,0 +1,21 @@
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.Row
+
+
+case class NewTreeNode(data : RDD[Array[String]], feature_idx : String, label_probabilities : List[Double], information_gain :Double){
+    /*Data Structure that contains information about a certain tree node.
+     Note: When extracting featureVals, need to make splits and featureVals are in same order
+     May have to put featureVals and splits together*/
+  var children : Array[(String, NewTreeNode)] = null
+    override def toString: String = {
+        if (children != null) {
+            val children_paths = children.zipWithIndex.map({case ((feature, child), index) => s"Child $index: ${feature}"}).mkString(", ")
+            s"NODE | Information Gain = $information_gain | Children = $children_paths"
+        } else {
+            val value_counts = data.map(x => x(x.length-1)).countByValue
+            val output = value_counts.map({case (label, count) => s"${label}->${count}"}).mkString(", ")
+          s"LEAF | Label Counts = $output | Pred Probs = ${label_probabilities.mkString(", ")}"
+        }
+    }
+}
+

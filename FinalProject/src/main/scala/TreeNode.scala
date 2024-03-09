@@ -6,7 +6,7 @@ case class TreeNode(data : RDD[Row], feature_idx : String, featureVals : RDD[Str
     /*Data Structure that contains information about a certain tree node.
      Note: When extracting featureVals, need to make splits and featureVals are in same order
      May have to put featureVals and splits together*/
-  var children : RDD[TreeNode] = null
+  var children : List[TreeNode] = null
     override def toString: String = {
         if (children != null) {
             val children_paths = featureVals.zipWithIndex().map({case (feature, index) => s"Child $index: ${feature}"}).collect().mkString(", ")
