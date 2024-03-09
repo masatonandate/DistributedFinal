@@ -6,7 +6,7 @@ import scala.math.log
 
 
 case class NewDecisionTree(maxDepth : Int = 4, minSamplesLeaf: Int = 1,
-                           minInformationGain: Double = 0.1, numOfFeaturesSplitting : String = "all",
+                           minInformationGain: Double = 0.0, numOfFeaturesSplitting : String = "all",
                            amtOfSay :  Double = -0.0 //, sc : SparkContext
                        )  {
 
@@ -51,14 +51,18 @@ case class NewDecisionTree(maxDepth : Int = 4, minSamplesLeaf: Int = 1,
       return null
     }
 
+    if (data.count() == 0){
+      return null
+    }
+
     val splitResult = getBestSplit(data, features)
-  println("Split Result: " + splitResult._1._1)
-    println("Split Entropy: " + splitResult._2._2)
+//  println("Split Result: " + splitResult._1._1)
+//    println("Split Entropy: " + splitResult._2._2)
     val parentEntropyAndProbs = findClassEntropy(data)
 
     //Get information gain from best split weighted entropy and parent Entropy
     val informationGain = parentEntropyAndProbs._2 - splitResult._2._2
-    println("Information Gain: " + informationGain)
+//    println("Information Gain: " + informationGain)
 
     val node = NewTreeNode(data, splitResult._1._1, parentEntropyAndProbs._1, informationGain)
 
@@ -79,21 +83,22 @@ case class NewDecisionTree(maxDepth : Int = 4, minSamplesLeaf: Int = 1,
 
   def recursive_print(node : NewTreeNode, level:Int=0): Unit = {
     if (node != null) {
+      println(
+        "    " *
+          4 * level + "->" + node.toString
+      )
       if (node.children != null) {
-        print(
-          "    " *
-            4 * level + "->" + node.toString
-        )
         for (child <- node.children) {
           recursive_print(child._2, level + 1)
         }
       }
-//      print(
-//        "" *
-//          4 * level + "->" + node.toString
-//      )
     }
+    //      print(
+    //        "" *
+    //          4 * level + "->" + node.toString
+    //      )
   }
+
 //  def _create_tree(self, data: np.array, current_depth: int) -> TreeNode:
 //    """
 //        Recursive, depth first tree creation algorithm

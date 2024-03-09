@@ -8,7 +8,7 @@ case class NewTreeNode(data : RDD[Array[String]], feature_idx : String, label_pr
      May have to put featureVals and splits together*/
   var children : Array[(String, NewTreeNode)] = null
     override def toString: String = {
-        if (children != null) {
+        if (children != null && children.forall({case (ftVal, node) => node!=null})) {
             val children_paths = children.zipWithIndex.map({case ((feature, child), index) => s"Child $index: ${feature}"}).mkString(", ")
             s"NODE | Information Gain = $information_gain | Children = $children_paths"
         } else {
