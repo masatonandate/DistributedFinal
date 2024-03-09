@@ -19,20 +19,20 @@ case class DecisionTree(maxDepth : Int = 4, minSamplesLeaf: Int = 1,
     labels.groupBy(identity).mapValues(_.size).map({case (x, count) => count * 1.0 / rddSize}).toList
   }
 
-  private val _data_entropy = (labels: List[String]) => {
+  private val _dataEntropy = (labels: List[String]) => {
     _entropy(_classProbs(labels))
   }
 
   //Gets Entropy
 //    subsets.persist
 //    val totalCount = subsets.flatMap(x => x).count
-//    val weighted_entropies = subsets.map(lst => _data_entropy(sc.parallelize(lst)) * lst.length / totalCount).reduce((x, y) => x + y)
+//    val weighted_entropies = subsets.map(lst => _dataEntropy(sc.parallelize(lst)) * lst.length / totalCount).reduce((x, y) => x + y)
 //    weighted_entropies
 //  }
-  def _partition_entropy(subsets: RDD[List[String]]): Double = {
+  def _partitionEntropy(subsets: RDD[List[String]]): Double = {
     subsets.persist
     val totalCount = subsets.flatMap(x => x).count
-    val weighted_entropies = subsets.map(lst => _data_entropy(lst) * lst.length / totalCount).reduce((x, y) => x + y)
+    val weighted_entropies = subsets.map(lst => _dataEntropy(lst) * lst.length / totalCount).reduce((x, y) => x + y)
     weighted_entropies
   }
 
@@ -41,37 +41,36 @@ case class DecisionTree(maxDepth : Int = 4, minSamplesLeaf: Int = 1,
   //Input: Column of DataFrame
   def _split(rows: RDD[Adult], featureIdx: String): RDD[List[Adult]] = {
     val splits = rows.map(x => (x.getFeatureAsString(featureIdx), x))
-    val groups = splits.groupByKey().map({ case (columnIdx, adults) => adults.toList })
-    groups
+    splits.groupByKey().map({ case (columnIdx, adults) => adults.toList })
   }
 
   // Takes in DataFrame of Adult entries, and returns the RDD of List of adults grouped by the values in columnIdx, columnIdx, and entropy value
-  def _find_best_split(data: RDD[Adult]): (RDD[List[Adult]], String, Double) = {
+  def _findBestSplit(data: RDD[Adult]): (RDD[List[Adult]], String, Double) = {
     val entropies = columnLabels.map(feature => (feature, _split(data, feature)))
       .map{
-        case (feature, split) => (split, feature, _partition_entropy(split.map(rows => rows.map(adult => adult.getFeatureAsString("income")))))
+        case (feature, split) => (split, feature, _partitionEntropy(split.map(rows => rows.map(adult => adult.getFeatureAsString("income")))))
       }
     val sortedEnt = entropies.sortBy({ case (split, feature, entropy) => entropy })
   sortedEnt.head
   }
 
   // (feature: String, Array(value: String, rows: List[Row]))
-  def _find_label_probs(data: RDD[String]): RDD[Double] = { // returns rdd of probs for each label (>=50k or <50k)
+  def _findLabelProbs(data: RDD[String]): RDD[Double] = { // returns rdd of probs for each label (>=50k or <50k)
     val labelCounts = data.map(x => (x, 1))
       .reduceByKey(_ + _)
     val totalCount = labelCounts.values.reduce((x, y) => x + y)
     labelCounts.map(_._2 / totalCount.toDouble)
   }
 
-  def _create_tree(data: RDD[Adult], current_depth: Integer): //= {
+  def _createTree(data: RDD[Adult], current_depth: Integer): //= {
   Unit = {
     if (current_depth > maxDepth) {
       return
     }
 
 
-    val (rows, featureIdx, entropy) = _find_best_split(data)
-    val labelProbs = _find_label_probs(data.map(_.getFeatureAsString("income")))
+    val (rows, featureIdx, entropy) = _findBestSplit(data)
+    val labelProbs = _findLabelProbs(data.map(_.getFeatureAsString("income")))
 
     //    """
     //        Recursive, depth first tree creation algorithm
@@ -82,10 +81,10 @@ case class DecisionTree(maxDepth : Int = 4, minSamplesLeaf: Int = 1,
     //    return None
     //
     //    # Find best split
-    //    split_1_data, split_2_data, split_feature_idx, split_feature_val, split_entropy = self._find_best_split(data)
+    //    split_1_data, split_2_data, split_feature_idx, split_feature_val, split_entropy = self._findBestSplit(data)
     //
     //    # Find label probs for the node
-    //      label_probabilities = self._find_label_probs(data)
+    //      label_probabilities = self._findLabelProbs(data)
     //
     //    # Calculate information gain
     //    node_entropy = self._entropy(label_probabilities)

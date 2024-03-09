@@ -23,12 +23,9 @@ object FinalProject {
     val data = sc.textFile("adult.csv")
       .map(_.split(","))
       .map(x => (x(0).toInt, Adult(x(1).toInt, x(2), x(3).toInt, x(4), x(5).toInt, x(6), x(7), x(8), x(9), x(10), x(11).toInt, x(12).toInt, x(13).toInt, x(14), x(15))))
-    val features = List("age","workclass","fnlwgt","education","educationNum",
-      "maritalStatus","occupation","relationship","race","sex","capitalGain",
-      "capitalLoss","hoursPerWeek","nativeCountry","income")
-    val decisionTree = DecisionTree(columnLabels = features.filter(_ != "income"))
+    val decisionTree = DecisionTree(columnLabels = Adult.getFeatures.filter(_ != "income"))
 
-   val bestTestSplit = decisionTree._find_best_split(data.map({case (rowNum, adult) => adult}))
+   val bestTestSplit = decisionTree._findBestSplit(data.map({case (rowNum, adult) => adult}))
     bestTestSplit._1.collect().foreach(println)
     println(bestTestSplit._2)
     println(bestTestSplit._3)

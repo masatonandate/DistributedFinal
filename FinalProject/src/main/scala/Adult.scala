@@ -4,13 +4,6 @@ case class Adult(age: Int, workclass: String, fnlwgt: Int,
                  capitalGain: Int, capitalLoss: Int, hoursPerWeek: Int,
                  nativeCountry: String, income: String)
 {
-  def getFeatures: List[String] = {
-    List("age","workclass","fnlwgt","education","educationNum",
-      "maritalStatus","occupation","relationship","race","sex","capitalGain",
-      "capitalLoss","hoursPerWeek","nativeCountry","income"
-    )
-  }
-
   def getLabel: String = {
     this.income
   }
@@ -32,5 +25,15 @@ case class Adult(age: Int, workclass: String, fnlwgt: Int,
     else if (featureName.equals("nativeCountry")) {this.nativeCountry}
     else if (featureName.equals("income")) {this.income}
     else {throw new IllegalArgumentException("Feature not found " + featureName)}
+  }
+}
+
+// Implement static methods below
+object Adult {
+  def getFeatures: List[String] = {
+    List("age","workclass","fnlwgt","education","educationNum",
+      "maritalStatus","occupation","relationship","race","sex","capitalGain",
+      "capitalLoss","hoursPerWeek","nativeCountry","income"
+    )
   }
 }
