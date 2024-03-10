@@ -60,11 +60,21 @@ package FinalProject {
       else if (informationGain < minInformationGain) {
         return node
       }
-      // Don't really want to collect this because its an large rdd of splits but trying for now
-      node.children = splitResult._2._1.collect.map({ case (featVal, split) =>
-        (featVal,
-          create_tree(data.filter(row => row(splitResult._1._2) == featVal), currentDepth + 1, features.filter({ case (ft, idx) => idx != splitResult._1._2 }), featVal))
-      })
+
+      //This change ensures that, if we are on the last feature to be chosen, it is not ommited from the list for the children nodes
+      //Instead the children nodes are made inplace here, using the splits already predetermined as part of finding lowest entropy class
+      if (features.length==1){
+        node.children = splitResult._2._1.collect.map({case (featVal, split)=> {val newData = data.filter(row => row(features(0)._2) == featVal);
+        val childEntAndProbs = findClassEntropy(newData);
+          (featVal, NewTreeNode(newData, features(0)._1, features(0)._2, childEntAndProbs._1, splitResult._2._2 - childEntAndProbs._2))}})
+      }
+      else {
+        // Don't really want to collect this because its an large rdd of splits but trying for now
+        node.children = splitResult._2._1.collect.map({ case (featVal, split) =>
+          (featVal,
+            create_tree(data.filter(row => row(splitResult._1._2) == featVal), currentDepth + 1, features.filter({ case (ft, idx) => idx != splitResult._1._2 }), featVal))
+        })
+      }
       node
     }
 

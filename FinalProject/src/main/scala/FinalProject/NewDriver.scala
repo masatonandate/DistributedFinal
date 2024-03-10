@@ -24,11 +24,14 @@ package FinalProject {
 
       // (featureName, featureIdx)
       val featureNames = Array(("workclass", 2), ("education", 4), ("marital-status", 6), ("race", 9), ("native-country", 14))
+      //val featureNames = Array(("workclass", 2), ("education", 4))//, ("marital-status", 6), ("race", 9), ("native-country", 14))
 
       //Build tree on train Data
       val decisionTree = NewDecisionTree(maxDepth = 5)
       val parentNode = decisionTree.create_tree(training, 0, featureNames, null)
+      //val parentNode = decisionTree.create_tree(values, 0, featureNames, null)
 
+      //decisionTree.recursive_print(parentNode)
       //Feed Test Data into Tree and get Results
       val testOutput = testing.map(x => (x(0), decisionTree.evaluate(x, parentNode)))
 

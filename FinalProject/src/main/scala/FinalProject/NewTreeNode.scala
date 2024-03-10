@@ -11,7 +11,7 @@ package FinalProject {
     override def toString: String = {
       if (children != null && children.forall({ case (ftVal, node) => node != null })) {
         val children_paths = children.zipWithIndex.map({ case ((feature, child), index) => s"Child $index: ${feature}" }).mkString(", ")
-        s"NODE | Information Gain = $information_gain | Children = $children_paths"
+        s"NODE | Feature : $featureName | Information Gain = $information_gain | Children = $children_paths"
       } else {
         val value_counts = data.map(x => x(x.length - 1)).countByValue
         val output = value_counts.map({ case (label, count) => s"${label}->${count}" }).mkString(", ")
