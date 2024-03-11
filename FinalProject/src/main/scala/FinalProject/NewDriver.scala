@@ -22,14 +22,14 @@ package FinalProject {
       //getting the answers
       val testAnswers = testing.map(row => (row(0), row(row.length - 1)))
 
+      // rowNumber,age,workclass,fnlwgt,education,education-num,marital-status,occupation,relationship,race,sex,capital-gain,capital-loss,hours-per-week,native-country,income
       // (featureName, featureIdx)
-      val featureNames = Array(("workclass", 2), ("education", 4), ("marital-status", 6), ("race", 9), ("native-country", 14))
-      //val featureNames = Array(("workclass", 2), ("education", 4))//, ("marital-status", 6), ("race", 9), ("native-country", 14))
+      val categoricalFeatureNames = Array(("workclass", 2), ("education", 4), ("marital-status", 6), ("race", 9), ("sex", 10))
+      val numericalFeatureNames = Array(("fnlwgt", 3))
 
       //Build tree on train Data
       val decisionTree = NewDecisionTree(maxDepth = 5)
-      val parentNode = decisionTree.create_tree(training, 0, featureNames, null)
-      //val parentNode = decisionTree.create_tree(values, 0, featureNames, null)
+      val parentNode = decisionTree.create_tree(training, 0, categoricalFeatureNames, numericalFeatureNames, null)
 
       //decisionTree.recursive_print(parentNode)
       //Feed Test Data into Tree and get Results
