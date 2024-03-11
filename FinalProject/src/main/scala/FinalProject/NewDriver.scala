@@ -1,10 +1,8 @@
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.rdd.RDD
 
 package FinalProject {
-
-  import org.apache.spark.rdd.RDD
-
   object NewDriver {
     def main(args: Array[String]): Unit = {
       Logger.getLogger("org").setLevel(Level.OFF)
@@ -46,11 +44,11 @@ package FinalProject {
 
       // rowNumber,age,workclass,fnlwgt,education,education-num,marital-status,occupation,relationship,race,sex,capital-gain,capital-loss,hours-per-week,native-country,income
       // (featureName, featureIdx)
-      val categoricalFeatureNames = Array(("workclass", 2), ("education", 4), ("marital-status", 6), ("race", 9), ("sex", 10))
+      val featureNames = Array(("workclass", 2), ("education", 4), ("marital-status", 6), ("race", 9), ("native-country", 14))
 
       //Build tree on train Data
       val decisionTree = NewDecisionTree(maxDepth = 5)
-      val parentNode = decisionTree.create_tree(training, 0, categoricalFeatureNames, null)
+      val parentNode = decisionTree.create_tree(training, 0, featureNames, null)
 
 
 //      decisionTree.recursive_print(parentNode)
