@@ -43,20 +43,13 @@ package FinalProject {
     }
 
     def create_tree(data: RDD[Array[String]], currentDepth: Int, features: Array[(String, Int)], parent: String): NewTreeNode = {
-      if (currentDepth > maxDepth || features.length == 0  || data.count() == 0) {
+      if (currentDepth > maxDepth || features.length == 0 || data.count() == 0) {
         return null
       }
       val splitResult = getBestSplit(data, features)
-
-      println(splitResult._1, splitResult._2._2)
-
+      println(splitResult._1._1)
 
       val parentEntropyAndProbs = findClassEntropy(data)
-
-      // If the parent is already a pure node, return null
-      if (parentEntropyAndProbs._2 == 0.0) {
-        return null
-      }
 
       //Get information gain from best split weighted entropy and parent Entropy
       val informationGain = parentEntropyAndProbs._2 - splitResult._2._2
@@ -72,13 +65,19 @@ package FinalProject {
         return node
       }
 
-      //This change ensures that, if we are on the last feature to be chosen, it is not omitted from the list for the children nodes
+      //This change ensures that, if we are on the last feature to be chosen, it is not ommited from the list for the children nodes
       //Instead the children nodes are made inplace here, using the splits already predetermined as part of finding lowest entropy class
       if (features.length==1){
-        node.children = splitResult._2._1.collect.map({case (featVal, split) => val newData = data.filter(row => row(features(0)._2) == featVal)
+        node.children = splitResult._2._1.collect.map({case (featVal, split)=> val newData = data.filter(row => row(features(0)._2) == featVal)
           val childEntAndProbs = findClassEntropy(newData)
           (featVal, NewTreeNode(newData, features(0)._1, features(0)._2, childEntAndProbs._1, splitResult._2._2 - childEntAndProbs._2))})
-      } else {
+      }
+      else if (splitResult._2._2 == 0.0){
+        node.children = splitResult._2._1.collect.map({case (featVal, split)=> val newData = data.filter(row => row(splitResult._1._2) == featVal)
+          val childEntAndProbs = findClassEntropy(newData)
+          (featVal, NewTreeNode(newData, splitResult._1._1, splitResult._1._2, childEntAndProbs._1, splitResult._2._2 - childEntAndProbs._2))})
+      }
+      else {
         // Don't really want to collect this because its an large rdd of splits but trying for now
         node.children = splitResult._2._1.collect.map({ case (featVal, split) =>
           (featVal,
