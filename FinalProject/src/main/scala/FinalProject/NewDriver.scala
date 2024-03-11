@@ -11,7 +11,7 @@ package FinalProject {
         .setMaster("local[4]")
       val sc = new SparkContext(conf)
 
-      val text = sc.textFile("smallAdult.csv") // If running on server, put Hadoop input file path
+      val text = sc.textFile("adult.csv") // If running on server, put Hadoop input file path
       val header = text.first()
       val values = text.filter(line => line != header)
         .map(line => line.split(","))
@@ -31,16 +31,16 @@ package FinalProject {
       val trainAnswers = training.map(row => (row(0), row(row.length - 1)))
 
       // (featureName, featureIdx)
-      val featureNames = Array(("workclass", 2), ("education", 4), ("marital-status", 6), ("race", 9), ("native-country", 14), ("dummy", 15))
-      val testFeature = Array(("dummy", 15))
+      val featureNames = Array(("workclass", 2), ("education", 4), ("marital-status", 6), ("race", 9), ("native-country", 14))
+//      val testFeature = Array(("dummy", 15))
       //val featureNames = Array(("workclass", 2), ("education", 4))//, ("marital-status", 6), ("race", 9), ("native-country", 14))
 
       //Build tree on train Data
       val decisionTree = NewDecisionTree(maxDepth = 5)
-      val parentNode = decisionTree.create_tree(training, 0, testFeature, null)
-      //val parentNode = decisionTree.create_tree(values, 0, featureNames, null)
+//      val parentNode = decisionTree.create_tree(training, 0, testFeature, null)
+      val parentNode = decisionTree.create_tree(values, 0, featureNames, null)
 
-      decisionTree.recursive_print(parentNode)
+//      decisionTree.recursive_print(parentNode)
       //Feed Test Data into Tree and get Results
       val testOutput = testing.map(x => (x(0), decisionTree.evaluate(x, parentNode)))
       val trainOutput = training.map(x => (x(0), decisionTree.evaluate(x, parentNode)))
@@ -81,8 +81,6 @@ package FinalProject {
 
       val trfscore = 2 * (trprecision * trrecall) / (trprecision + trrecall)
       println("Training", trfscore, trprecision, trrecall, trtp, trfp, trfn, trtn)
-
-
     }
   }
 }
