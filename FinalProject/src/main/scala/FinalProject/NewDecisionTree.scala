@@ -69,6 +69,11 @@ package FinalProject {
         val childEntAndProbs = findClassEntropy(newData);
           (featVal, NewTreeNode(newData, features(0)._1, features(0)._2, childEntAndProbs._1, splitResult._2._2 - childEntAndProbs._2))}})
       }
+      else if (splitResult._2._2 == 0.0){
+        node.children = splitResult._2._1.collect.map({case (featVal, split)=> {val newData = data.filter(row => row(splitResult._1._2) == featVal);
+          val childEntAndProbs = findClassEntropy(newData);
+          (featVal, NewTreeNode(newData, splitResult._1._1, splitResult._1._2, childEntAndProbs._1, splitResult._2._2 - childEntAndProbs._2))}})
+      }
       else {
         // Don't really want to collect this because its an large rdd of splits but trying for now
         node.children = splitResult._2._1.collect.map({ case (featVal, split) =>

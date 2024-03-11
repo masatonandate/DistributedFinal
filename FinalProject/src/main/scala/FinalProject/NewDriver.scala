@@ -40,7 +40,7 @@ package FinalProject {
       val parentNode = decisionTree.create_tree(training, 0, testFeature, null)
       //val parentNode = decisionTree.create_tree(values, 0, featureNames, null)
 
-      //decisionTree.recursive_print(parentNode)
+      decisionTree.recursive_print(parentNode)
       //Feed Test Data into Tree and get Results
       val testOutput = testing.map(x => (x(0), decisionTree.evaluate(x, parentNode)))
       val trainOutput = training.map(x => (x(0), decisionTree.evaluate(x, parentNode)))
