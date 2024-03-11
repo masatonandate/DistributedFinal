@@ -83,6 +83,7 @@ package FinalProject {
 
       println(splitResult._1, splitResult._2._2)
 
+
       val parentEntropyAndProbs = findClassEntropy(data)
 
       // If the parent is already a pure node, return null
@@ -139,9 +140,12 @@ package FinalProject {
     }
 
     def evaluate(testRow: Array[String], node: NewTreeNode): String = {
-      val newNode = node.children.filter({ case (featVal, childNode) => testRow(node.featureIdx) == childNode.featureName })
+      if (node.children == null || node.children.length == 0 || !node.children.forall({ case (ftVal, node) => node != null })){
+        return node.mostLikelyLabel
+      }
+      val newNode = node.children.filter({ case (featVal, childNode) => testRow(node.featureIdx) == featVal })
       // Base case when we reach a leaf
-      if (node.children == null || node.children.length == 0 || newNode.length == 0) {
+      if (newNode.length == 0) {
         return node.mostLikelyLabel
       }
 
