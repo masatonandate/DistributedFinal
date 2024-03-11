@@ -7,58 +7,25 @@ package FinalProject {
                              amtOfSay: Double = -0.0 //, sc : SparkContext
                             ) {
 
-    // Given feature of integers, finds 25th, 50th, and 75th percentiles
-    def find_percentiles(data: RDD[Int]): (Int, Int, Int) = {
-      val featureVals = data.collect().sorted(Ordering[Int])
-      (featureVals((featureVals.length * 0.25).toInt), featureVals((featureVals.length * 0.5).toInt), featureVals((featureVals.length * 0.75).toInt))
-    }
-
     //Goes through all data with remaining features and finds best feature, returns (featureName, featureIdx), RDD[(featureValue, List(rows with featureValue))], entropy)
-    def getBestSplit(data: RDD[Array[String]], categoricalFeatures: Array[(String, Int)], numericFeatures: Array[(String, Int)]): ((String, Int), (RDD[(String, List[Array[String]])], Double)) //: RDD[Array[String]] = {
+    def getBestSplit(data: RDD[Array[String]], features: Array[(String, Int)]): ((String, Int), (RDD[(String, List[Array[String]])], Double)) //: RDD[Array[String]] = {
     = {
-      categoricalFeatures.map({ case (feature, index) => ((feature, index), partitionEntropy(data.map(x => (x(index), x)))) })
-        .union(numericFeatures.map({ case (feature, index) => ((feature, index), partitionEntropy(data.map(x => (x(index), x)), isNumeric=true)) }))
+      features.map({ case (feature, index) => ((feature, index), partitionEntropy(data.map(x => (x(index), x)))) })
         .minBy({ case ((feature, index), (list, entropy)) => entropy })
     }
 
-    def getKeyFromPercentile(value: Int, percentiles: (Int, Int, Int)): String = {
-      if (value < percentiles._1) {
-        "0"
-      } else if (value < percentiles._2) {
-        "1"
-      } else if (value < percentiles._3) {
-        "2"
-      } else {
-        "3"
-      }
-    }
-
     // Gets total weighted entropy and splits per value for a feature
-    def partitionEntropy(value: RDD[(String, Array[String])], isNumeric: Boolean = false): (RDD[(String, List[Array[String]])], Double) = {
+    def partitionEntropy(value: RDD[(String, Array[String])]): (RDD[(String, List[Array[String]])], Double) = {
       val total_labels = value.count()
-      if (isNumeric) {
-        // Calculates total weighted entropy for each percentile
-        val percentiles = find_percentiles(value.map({ case (ftVal, row) => ftVal.toInt }))
-        val weighted_entropy = value
-          .map({ case (ftVal, row) => (getKeyFromPercentile(ftVal.toInt, percentiles), row(row.length - 1)) })
-          .groupByKey()
-          .map({ case (ftVal, labelSplit) => entropy(labelSplit.toList) * labelSplit.toList.length / total_labels }).sum
-        val splits = value
-          .map({ case (ftVal, split) => (getKeyFromPercentile(ftVal.toInt, percentiles), split) })
-          .groupByKey()
-          .map({ case (ftVal, split) => (ftVal, split.toList) })
-        (splits, weighted_entropy)
-      } else {
-        // Calculates total weighted entropy for specific feature
-        val weighted_entropy = value
-          .map({ case (ftVal, row) => (ftVal, row(row.length - 1)) })
-          .groupByKey()
-          .map({ case (ftVal, labelSplit) => entropy(labelSplit.toList) * labelSplit.toList.length / total_labels }).sum
-        val splits = value
-          .groupByKey()
-          .map({ case (ftVal, split) => (ftVal, split.toList) })
-        (splits, weighted_entropy)
-      }
+      // Calculates total weighted entropy for specific feature
+      val weighted_entropy = value
+        .map({ case (ftVal, row) => (ftVal, row(row.length - 1)) })
+        .groupByKey()
+        .map({ case (ftVal, labelSplit) => entropy(labelSplit.toList) * labelSplit.toList.length / total_labels }).sum
+      val splits = value
+        .groupByKey()
+        .map({ case (ftVal, split) => (ftVal, split.toList) })
+      (splits, weighted_entropy)
     }
 
     //Takes in a list of labels and returns the entropy
@@ -75,11 +42,11 @@ package FinalProject {
       (label_probs, label_probs.map({ case (label, prob) => -prob * math.log(prob) }).sum)
     }
 
-    def create_tree(data: RDD[Array[String]], currentDepth: Int, categoricalFeatures: Array[(String, Int)], numericFeatures: Array[(String, Int)], parent: String): NewTreeNode = {
-      if (currentDepth > maxDepth || (categoricalFeatures.length == 0 && numericFeatures.length == 0) || data.count() == 0) {
+    def create_tree(data: RDD[Array[String]], currentDepth: Int, features: Array[(String, Int)], parent: String): NewTreeNode = {
+      if (currentDepth > maxDepth || features.length == 0  || data.count() == 0) {
         return null
       }
-      val splitResult = getBestSplit(data, categoricalFeatures, numericFeatures)
+      val splitResult = getBestSplit(data, features)
 
       println(splitResult._1, splitResult._2._2)
 
@@ -107,19 +74,15 @@ package FinalProject {
 
       //This change ensures that, if we are on the last feature to be chosen, it is not omitted from the list for the children nodes
       //Instead the children nodes are made inplace here, using the splits already predetermined as part of finding lowest entropy class
-      if (categoricalFeatures.length==1 && numericFeatures.length==0){
-        node.children = splitResult._2._1.collect.map({case (featVal, split) => val newData = data.filter(row => row(categoricalFeatures(0)._2) == featVal)
+      if (features.length==1){
+        node.children = splitResult._2._1.collect.map({case (featVal, split) => val newData = data.filter(row => row(features(0)._2) == featVal)
           val childEntAndProbs = findClassEntropy(newData)
-          (featVal, NewTreeNode(newData, categoricalFeatures(0)._1, categoricalFeatures(0)._2, childEntAndProbs._1, splitResult._2._2 - childEntAndProbs._2))})
-      } else if (categoricalFeatures.length==0 && numericFeatures.length==1){
-        node.children = splitResult._2._1.collect.map({case (featVal, split) => val newData = data.filter(row => row(numericFeatures(0)._2) == featVal)
-          val childEntAndProbs = findClassEntropy(newData)
-          (featVal, NewTreeNode(newData, numericFeatures(0)._1, numericFeatures(0)._2, childEntAndProbs._1, splitResult._2._2 - childEntAndProbs._2))})
+          (featVal, NewTreeNode(newData, features(0)._1, features(0)._2, childEntAndProbs._1, splitResult._2._2 - childEntAndProbs._2))})
       } else {
         // Don't really want to collect this because its an large rdd of splits but trying for now
         node.children = splitResult._2._1.collect.map({ case (featVal, split) =>
           (featVal,
-            create_tree(data.filter(row => row(splitResult._1._2) == featVal), currentDepth + 1, categoricalFeatures.filter({ case (ft, idx) => idx != splitResult._1._2 }), numericFeatures.filter({ case (ft, idx) => idx != splitResult._1._2 }), featVal))
+            create_tree(data.filter(row => row(splitResult._1._2) == featVal), currentDepth + 1, features.filter({ case (ft, idx) => idx != splitResult._1._2 }), featVal))
         })
       }
       node
