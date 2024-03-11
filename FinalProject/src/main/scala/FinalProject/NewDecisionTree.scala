@@ -3,7 +3,7 @@ import org.apache.spark.rdd.RDD
 
 package FinalProject {
   case class NewDecisionTree(maxDepth: Int = 3, minSamplesLeaf: Int = 1,
-                             minInformationGain: Double = 0.0, numOfFeaturesSplitting: String = "all",
+                             minInformationGain: Double = 0.0,
                              amtOfSay: Double = -0.0 //, sc : SparkContext
                             ) {
 
@@ -14,15 +14,18 @@ package FinalProject {
         .minBy({ case ((feature, index), (list, entropy)) => entropy })
     }
 
-
     // Gets total weighted entropy and splits per value for a feature
     def partitionEntropy(value: RDD[(String, Array[String])]): (RDD[(String, List[Array[String]])], Double) = {
       val total_labels = value.count()
       // Calculates total weighted entropy for specific feature
-      val weighted_entropy = value.map({ case (ftVal, row) => (ftVal, row(row.length - 1)) }).groupByKey().map({ case (ftVal, labelSplit) => entropy(labelSplit.toList) * labelSplit.toList.length / total_labels }).sum
-      val splits = value.groupByKey().map({ case (ftVal, split) => (ftVal, split.toList) })
+      val weighted_entropy = value
+        .map({ case (ftVal, row) => (ftVal, row(row.length - 1)) })
+        .groupByKey()
+        .map({ case (ftVal, labelSplit) => entropy(labelSplit.toList) * labelSplit.toList.length / total_labels }).sum
+      val splits = value
+        .groupByKey()
+        .map({ case (ftVal, split) => (ftVal, split.toList) })
       (splits, weighted_entropy)
-
     }
 
     //Takes in a list of labels and returns the entropy
@@ -40,13 +43,20 @@ package FinalProject {
     }
 
     def create_tree(data: RDD[Array[String]], currentDepth: Int, features: Array[(String, Int)], parent: String): NewTreeNode = {
-      if (currentDepth > maxDepth || features.length == 0 || data.count() == 0) {
+      if (currentDepth > maxDepth || features.length == 0  || data.count() == 0) {
         return null
       }
       val splitResult = getBestSplit(data, features)
-      println(splitResult._1._1)
+
+      println(splitResult._1, splitResult._2._2)
+
 
       val parentEntropyAndProbs = findClassEntropy(data)
+
+      // If the parent is already a pure node, return null
+      if (parentEntropyAndProbs._2 == 0.0) {
+        return null
+      }
 
       //Get information gain from best split weighted entropy and parent Entropy
       val informationGain = parentEntropyAndProbs._2 - splitResult._2._2
@@ -62,19 +72,13 @@ package FinalProject {
         return node
       }
 
-      //This change ensures that, if we are on the last feature to be chosen, it is not ommited from the list for the children nodes
+      //This change ensures that, if we are on the last feature to be chosen, it is not omitted from the list for the children nodes
       //Instead the children nodes are made inplace here, using the splits already predetermined as part of finding lowest entropy class
       if (features.length==1){
-        node.children = splitResult._2._1.collect.map({case (featVal, split)=> {val newData = data.filter(row => row(features(0)._2) == featVal);
-        val childEntAndProbs = findClassEntropy(newData);
-          (featVal, NewTreeNode(newData, features(0)._1, features(0)._2, childEntAndProbs._1, splitResult._2._2 - childEntAndProbs._2))}})
-      }
-      else if (splitResult._2._2 == 0.0){
-        node.children = splitResult._2._1.collect.map({case (featVal, split)=> {val newData = data.filter(row => row(splitResult._1._2) == featVal);
-          val childEntAndProbs = findClassEntropy(newData);
-          (featVal, NewTreeNode(newData, splitResult._1._1, splitResult._1._2, childEntAndProbs._1, splitResult._2._2 - childEntAndProbs._2))}})
-      }
-      else {
+        node.children = splitResult._2._1.collect.map({case (featVal, split) => val newData = data.filter(row => row(features(0)._2) == featVal)
+          val childEntAndProbs = findClassEntropy(newData)
+          (featVal, NewTreeNode(newData, features(0)._1, features(0)._2, childEntAndProbs._1, splitResult._2._2 - childEntAndProbs._2))})
+      } else {
         // Don't really want to collect this because its an large rdd of splits but trying for now
         node.children = splitResult._2._1.collect.map({ case (featVal, split) =>
           (featVal,
@@ -113,8 +117,3 @@ package FinalProject {
     }
   }
 }
-
-
-
-
-

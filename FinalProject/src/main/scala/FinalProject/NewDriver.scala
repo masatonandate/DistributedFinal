@@ -2,6 +2,9 @@ import org.apache.log4j.{Level, Logger}
 import org.apache.spark.{SparkConf, SparkContext}
 
 package FinalProject {
+
+  import org.apache.spark.rdd.RDD
+
   object NewDriver {
     def main(args: Array[String]): Unit = {
       Logger.getLogger("org").setLevel(Level.OFF)
@@ -13,8 +16,19 @@ package FinalProject {
 
       val text = sc.textFile("adult.csv") // If running on server, put Hadoop input file path
       val header = text.first()
-      val values = text.filter(line => line != header)
+      // adjust the numeric data in RDD to be 4 categories representing percentiles
+      val rows = text.filter(line => line != header)
         .map(line => line.split(","))
+      // Array of (featureName, featureIdx, (25th, 50th, 75th) percentiles)
+      val numericalFeatures = Array(
+        ("fnlwgt", 3, find_percentiles(rows.map(r => r(3).toInt)))
+      )
+      val values = rows.map(r => {
+        numericalFeatures.foreach(f => {
+          r(f._2) = getKeyFromPercentile(r(f._2).toInt, f._3)
+        })
+        r
+      })
 
       //Splitting Training and Testing (80/20)
       val trainTest = values.randomSplit(Array(0.8, 0.2), 1)
@@ -24,21 +38,20 @@ package FinalProject {
       println("training length:" ,training.collect().length)
 //      val testing = values.subtract(training)
       println("testing length:", testing.collect().length)
-      println("Training Positive Length", training.filter(x => (x(x.length - 1) == ">50K")).collect().length)
+      println("Training Positive Length", training.filter(x => x(x.length - 1) == ">50K").collect().length)
 
       //getting the answers
       val testAnswers = testing.map(row => (row(0), row(row.length - 1)))
       val trainAnswers = training.map(row => (row(0), row(row.length - 1)))
 
+      // rowNumber,age,workclass,fnlwgt,education,education-num,marital-status,occupation,relationship,race,sex,capital-gain,capital-loss,hours-per-week,native-country,income
       // (featureName, featureIdx)
-      val featureNames = Array(("workclass", 2), ("education", 4), ("marital-status", 6), ("race", 9), ("native-country", 14))
-//      val testFeature = Array(("dummy", 15))
-      //val featureNames = Array(("workclass", 2), ("education", 4))//, ("marital-status", 6), ("race", 9), ("native-country", 14))
+      val categoricalFeatureNames = Array(("workclass", 2), ("education", 4), ("marital-status", 6), ("race", 9), ("sex", 10))
 
       //Build tree on train Data
       val decisionTree = NewDecisionTree(maxDepth = 5)
-//      val parentNode = decisionTree.create_tree(training, 0, testFeature, null)
-      val parentNode = decisionTree.create_tree(values, 0, featureNames, null)
+      val parentNode = decisionTree.create_tree(training, 0, categoricalFeatureNames, null)
+
 
 //      decisionTree.recursive_print(parentNode)
       //Feed Test Data into Tree and get Results
@@ -81,6 +94,24 @@ package FinalProject {
 
       val trfscore = 2 * (trprecision * trrecall) / (trprecision + trrecall)
       println("Training", trfscore, trprecision, trrecall, trtp, trfp, trfn, trtn)
+    }
+
+    def getKeyFromPercentile(value: Int, percentiles: (Int, Int, Int)): String = {
+      if (value < percentiles._1) {
+        "0"
+      } else if (value < percentiles._2) {
+        "1"
+      } else if (value < percentiles._3) {
+        "2"
+      } else {
+        "3"
+      }
+    }
+
+    // Given feature of integers, finds 25th, 50th, and 75th percentiles
+    def find_percentiles(data: RDD[Int]): (Int, Int, Int) = {
+      val featureVals = data.collect().sorted(Ordering[Int])
+      (featureVals((featureVals.length * 0.25).toInt), featureVals((featureVals.length * 0.5).toInt), featureVals((featureVals.length * 0.75).toInt))
     }
   }
 }
