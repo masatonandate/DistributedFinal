@@ -44,6 +44,7 @@ package FinalProject {
         return null
       }
       val splitResult = getBestSplit(data, features)
+      println(splitResult._1._1)
 
       val parentEntropyAndProbs = findClassEntropy(data)
 
