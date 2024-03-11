@@ -44,6 +44,7 @@ package FinalProject {
         return null
       }
       val splitResult = getBestSplit(data, features)
+      println(splitResult._1._1)
 
       val parentEntropyAndProbs = findClassEntropy(data)
 
@@ -67,6 +68,11 @@ package FinalProject {
         node.children = splitResult._2._1.collect.map({case (featVal, split)=> {val newData = data.filter(row => row(features(0)._2) == featVal);
         val childEntAndProbs = findClassEntropy(newData);
           (featVal, NewTreeNode(newData, features(0)._1, features(0)._2, childEntAndProbs._1, splitResult._2._2 - childEntAndProbs._2))}})
+      }
+      else if (splitResult._2._2 == 0.0){
+        node.children = splitResult._2._1.collect.map({case (featVal, split)=> {val newData = data.filter(row => row(splitResult._1._2) == featVal);
+          val childEntAndProbs = findClassEntropy(newData);
+          (featVal, NewTreeNode(newData, splitResult._1._1, splitResult._1._2, childEntAndProbs._1, splitResult._2._2 - childEntAndProbs._2))}})
       }
       else {
         // Don't really want to collect this because its an large rdd of splits but trying for now
@@ -93,9 +99,12 @@ package FinalProject {
     }
 
     def evaluate(testRow: Array[String], node: NewTreeNode): String = {
-      val newNode = node.children.filter({ case (featVal, childNode) => testRow(node.featureIdx) == childNode.featureName })
+      if (node.children == null || node.children.length == 0 || !node.children.forall({ case (ftVal, node) => node != null })){
+        return node.mostLikelyLabel
+      }
+      val newNode = node.children.filter({ case (featVal, childNode) => testRow(node.featureIdx) == featVal })
       // Base case when we reach a leaf
-      if (node.children == null || node.children.length == 0 || newNode.length == 0) {
+      if (newNode.length == 0) {
         return node.mostLikelyLabel
       }
 
