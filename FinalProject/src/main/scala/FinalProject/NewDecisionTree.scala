@@ -2,8 +2,8 @@ import org.apache.spark.rdd.RDD
 //Decision tree class holding functions to train and inference on the model
 
 package FinalProject {
-  case class NewDecisionTree(maxDepth: Int = 5, minSamplesLeaf: Int = 1,
-                             minInformationGain: Double = 0.0, numOfFeaturesSplitting: String = "all",
+  case class NewDecisionTree(maxDepth: Int = 3, minSamplesLeaf: Int = 1,
+                             minInformationGain: Double = 0.0,
                              amtOfSay: Double = -0.0 //, sc : SparkContext
                             ) {
 
@@ -15,15 +15,18 @@ package FinalProject {
 //        .minBy({ case ((feature, index), (list, entropy)) => entropy })
     }
 
-
     // Gets total weighted entropy and splits per value for a feature
     def partitionEntropy(value: RDD[(String, Array[String])]): (RDD[(String, List[Array[String]])], Double) = {
       val total_labels = value.count()
       // Calculates total weighted entropy for specific feature
-      val weighted_entropy = value.map({ case (ftVal, row) => (ftVal, row(row.length - 1)) }).groupByKey().map({ case (ftVal, labelSplit) => entropy(labelSplit.toList) * labelSplit.toList.length / total_labels }).sum
-      val splits = value.groupByKey().map({ case (ftVal, split) => (ftVal, split.toList) })
+      val weighted_entropy = value
+        .map({ case (ftVal, row) => (ftVal, row(row.length - 1)) })
+        .groupByKey()
+        .map({ case (ftVal, labelSplit) => entropy(labelSplit.toList) * labelSplit.toList.length / total_labels }).sum
+      val splits = value
+        .groupByKey()
+        .map({ case (ftVal, split) => (ftVal, split.toList) })
       (splits, weighted_entropy)
-
     }
 
     //Takes in a list of labels and returns the entropy
@@ -132,8 +135,3 @@ package FinalProject {
     }
   }
 }
-
-
-
-
-
