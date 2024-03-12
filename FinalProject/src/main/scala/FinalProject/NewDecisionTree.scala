@@ -2,16 +2,17 @@ import org.apache.spark.rdd.RDD
 //Decision tree class holding functions to train and inference on the model
 
 package FinalProject {
-  case class NewDecisionTree(maxDepth: Int = 3, minSamplesLeaf: Int = 1,
+  case class NewDecisionTree(maxDepth: Int = 5, minSamplesLeaf: Int = 1,
                              minInformationGain: Double = 0.0, numOfFeaturesSplitting: String = "all",
                              amtOfSay: Double = -0.0 //, sc : SparkContext
                             ) {
 
     //Goes through all data with remaining features and finds best feature, returns (featureName, featureIdx), RDD[(featureValue, List(rows with featureValue))], entropy)
-    def getBestSplit(data: RDD[Array[String]], features: Array[(String, Int)]): ((String, Int), (RDD[(String, List[Array[String]])], Double)) //: RDD[Array[String]] = {
+    def getBestSplit(data: RDD[Array[String]], features: Array[(String, Int)]): Array[((String, Int), (RDD[(String, List[Array[String]])], Double))] //: RDD[Array[String]] = {
     = {
       features.map({ case (feature, index) => ((feature, index), partitionEntropy(data.map(x => (x(index), x)))) })
-        .minBy({ case ((feature, index), (list, entropy)) => entropy })
+        .sortBy({case ((feature, index), (list, entropy)) => -entropy})
+//        .minBy({ case ((feature, index), (list, entropy)) => entropy })
     }
 
 
@@ -32,6 +33,14 @@ package FinalProject {
       probs.map(prob => -prob * math.log(prob)).sum
     }
 
+    //given the numerator - information gain, the subsets, and parentDataLength, returns InformationGainRatio
+    def calculateRatio(sublist: RDD[(String, List[Array[String]])], numerator: Double, parentDataLength: Double): Double = {
+      val subCounts = sublist.map({case (featureVal, subrows) => subrows.length * 1.0})
+      val denominator = subCounts.map(subLength => -(subLength / parentDataLength) * math.log(subLength / parentDataLength))
+      if (denominator.sum() != -0.0) {numerator / denominator.sum()}
+      else {0}
+    }
+
     // Given split, finds class entropy
     def findClassEntropy(labels: RDD[Array[String]]): (List[(String, Double)], Double) = {
       val rddSize = labels.count()
@@ -44,41 +53,51 @@ package FinalProject {
         return null
       }
       val splitResult = getBestSplit(data, features)
-      println(splitResult._1._1)
 
       val parentEntropyAndProbs = findClassEntropy(data)
+      val parentEntropy = parentEntropyAndProbs._2
+      val parentLength = data.collect().length
 
-      //Get information gain from best split weighted entropy and parent Entropy
-      val informationGain = parentEntropyAndProbs._2 - splitResult._2._2
+      //Calculate All Information Gains
+//      val informationGain = parentEntropyAndProbs._2 - splitResult._2._2
+      //this gets information gain for all columns
+      val informationGains = splitResult
+        .map({case ((feature, index), (list, entropy)) => ((feature, index), (list, entropy, parentEntropy - entropy))})
+      //this calculate gain ratio for all columns
+      val informationGainRatio = informationGains
+        .map({case ((feature, index), (list, entropy, gainRatio)) => ((feature, index), (list, entropy, calculateRatio(list, gainRatio, parentLength)))})
+      //want to get highest gain ratio
+      val bestSplit = informationGainRatio.minBy({case ((feature, index), (list, entropy, gainRatio)) => -gainRatio})
+      println("final gainRatio:", bestSplit._2._3)
 
-      val node = NewTreeNode(data, splitResult._1._1, splitResult._1._2, parentEntropyAndProbs._1, informationGain)
+      val node = NewTreeNode(data, bestSplit._1._1, bestSplit._1._2, parentEntropyAndProbs._1, bestSplit._2._3)
 
       // If the split contains any samples that are smaller than the minimum samples at a leaf, return the node
-      if (splitResult._2._1.map({ case (ftVal, split) => split.length < minSamplesLeaf }).filter(_ == true).count > 0) {
+      if (bestSplit._2._1.map({ case (ftVal, split) => split.length < minSamplesLeaf }).filter(_ == true).count > 0) {
         return node
       }
       // If information gain is worse than minimum described
-      else if (informationGain < minInformationGain) {
+      else if (bestSplit._2._3 <= minInformationGain) {
         return node
       }
 
       //This change ensures that, if we are on the last feature to be chosen, it is not ommited from the list for the children nodes
       //Instead the children nodes are made inplace here, using the splits already predetermined as part of finding lowest entropy class
       if (features.length==1){
-        node.children = splitResult._2._1.collect.map({case (featVal, split)=> {val newData = data.filter(row => row(features(0)._2) == featVal);
+        node.children = bestSplit._2._1.collect.map({case (featVal, split)=> {val newData = data.filter(row => row(features(0)._2) == featVal);
         val childEntAndProbs = findClassEntropy(newData);
-          (featVal, NewTreeNode(newData, features(0)._1, features(0)._2, childEntAndProbs._1, splitResult._2._2 - childEntAndProbs._2))}})
+          (featVal, NewTreeNode(newData, features(0)._1, features(0)._2, childEntAndProbs._1, bestSplit._2._2 - childEntAndProbs._2))}})
       }
-      else if (splitResult._2._2 == 0.0){
-        node.children = splitResult._2._1.collect.map({case (featVal, split)=> {val newData = data.filter(row => row(splitResult._1._2) == featVal);
+      else if (bestSplit._2._2 == 0.0){
+        node.children = bestSplit._2._1.collect.map({case (featVal, split)=> {val newData = data.filter(row => row(bestSplit._1._2) == featVal);
           val childEntAndProbs = findClassEntropy(newData);
-          (featVal, NewTreeNode(newData, splitResult._1._1, splitResult._1._2, childEntAndProbs._1, splitResult._2._2 - childEntAndProbs._2))}})
+          (featVal, NewTreeNode(newData, bestSplit._1._1, bestSplit._1._2, childEntAndProbs._1, bestSplit._2._2 - childEntAndProbs._2))}})
       }
       else {
         // Don't really want to collect this because its an large rdd of splits but trying for now
-        node.children = splitResult._2._1.collect.map({ case (featVal, split) =>
+        node.children = bestSplit._2._1.collect.map({ case (featVal, split) =>
           (featVal,
-            create_tree(data.filter(row => row(splitResult._1._2) == featVal), currentDepth + 1, features.filter({ case (ft, idx) => idx != splitResult._1._2 }), featVal))
+            create_tree(data.filter(row => row(bestSplit._1._2) == featVal), currentDepth + 1, features.filter({ case (ft, idx) => idx != bestSplit._1._2 }), featVal))
         })
       }
       node
