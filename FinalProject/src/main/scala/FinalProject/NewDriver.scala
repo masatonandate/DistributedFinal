@@ -92,6 +92,7 @@ package FinalProject {
 
       val trfscore = 2 * (trprecision * trrecall) / (trprecision + trrecall)
       println("Training", trfscore, trprecision, trrecall, trtp, trfp, trfn, trtn)
+      decisionTree.recursive_print(parentNode, 3)
     }
 
     def getKeyFromPercentile(value: Int, percentiles: (Int, Int, Int)): String = {
