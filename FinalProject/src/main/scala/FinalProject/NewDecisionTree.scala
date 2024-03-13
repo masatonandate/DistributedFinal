@@ -71,7 +71,6 @@ package FinalProject {
         .map({case ((feature, index), (list, entropy, gainRatio)) => ((feature, index), (list, entropy, calculateRatio(list, gainRatio, parentLength)))})
       //want to get highest gain ratio
       val bestSplit = informationGainRatio.minBy({case ((feature, index), (list, entropy, gainRatio)) => -gainRatio})
-      println("final gainRatio:", bestSplit._2._3)
 
       val node = NewTreeNode(data, bestSplit._1._1, bestSplit._1._2, parentEntropyAndProbs._1, bestSplit._2._3)
 
