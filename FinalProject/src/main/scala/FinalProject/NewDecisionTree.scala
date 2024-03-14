@@ -12,7 +12,6 @@ package FinalProject {
     = {
       features.map({ case (feature, index) => ((feature, index), partitionEntropy(data.map(x => (x(index), x)))) })
         .sortBy({case ((feature, index), (list, entropy)) => -entropy})
-//        .minBy({ case ((feature, index), (list, entropy)) => entropy })
     }
 
     // Gets total weighted entropy and splits per value for a feature
