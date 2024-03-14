@@ -29,14 +29,14 @@ package FinalProject {
       (splits, weighted_entropy)
     }
 
-    //Takes in a list of labels and returns the entropy
+    // Takes in a list of labels and returns the entropy
     def entropy(data: List[String]): Double = {
       val counts = data.groupBy(identity).mapValues(_.size)
       val probs = counts.map({ case (label, count) => count.toDouble / data.length })
       probs.map(prob => -prob * math.log(prob)).sum
     }
 
-    //given the numerator - information gain, the subsets, and parentDataLength, returns InformationGainRatio
+    // Given the numerator - information gain, the subsets, and parentDataLength, returns InformationGainRatio
     def calculateRatio(sublist: RDD[(String, List[Array[String]])], numerator: Double, parentDataLength: Double): Double = {
       val subCounts = sublist.map({case (featureVal, subrows) => subrows.length * 1.0})
       val denominator = subCounts.map(subLength => -(subLength / parentDataLength) * math.log(subLength / parentDataLength))
@@ -61,9 +61,10 @@ package FinalProject {
       val parentEntropy = parentEntropyAndProbs._2
       val parentLength = data.collect().length
 
-      //Calculate All Information Gains
-//      val informationGain = parentEntropyAndProbs._2 - splitResult._2._2
-      //this gets information gain for all columns
+      // Calculate All Information Gains
+      // val informationGain = parentEntropyAndProbs._2 - splitResult._2._2
+
+      // This gets information gain for all columns
       val informationGains = splitResult
         .map({case ((feature, index), (list, entropy)) => ((feature, index), (list, entropy, parentEntropy - entropy))})
       //this calculate gain ratio for all columns

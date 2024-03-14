@@ -17,7 +17,7 @@ package FinalProject {
 
       val text = sc.textFile("adult.csv") // If running on server, put Hadoop input file path
       val header = text.first()
-      // adjust the numeric data in RDD to be 4 categories representing percentiles
+      // Adjust the numeric data in RDD to be 4 categories representing percentiles
       val rows = text.filter(line => line != header)
         .map(line => line.split(","))
       // Array of (featureName, featureIdx, (25th, 50th, 75th) percentiles)
@@ -32,7 +32,7 @@ package FinalProject {
         r
       })
 
-      //Splitting Training and Testing (80/20)
+      // Splitting Training and Testing (80/20)
       val trainTest = values.randomSplit(Array(0.8, 0.2), 1)
       val training = trainTest(0)
       val testing = trainTest(1)
@@ -40,35 +40,28 @@ package FinalProject {
       println("testing length:", testing.collect().length)
       println("Training Positive Length", training.filter(x => x(x.length - 1) == ">50K").collect().length)
 
-      //getting the answers
+      // Getting the answers
       val testAnswers = testing.map(row => (row(0), row(row.length - 1)))
       val trainAnswers = training.map(row => (row(0), row(row.length - 1)))
 
-      // rowNumber,age,workclass 2,fnlwgt 3*,education 4,education-num 5*,marital-status 6,occupation 7,relationship 8,race 9,
-      // sex 10,capital-gain 11*,capital-loss 12*,hours-per-week 13*,native-country 14,income 15
       // (featureName, featureIdx)
-      val featureNames = Array(("workclass", 2), ("education", 4), ("marital-status", 6), ("race", 9), ("native-country", 14))
       val allFeatures = Array(("workclass", 2), ("fnlwft", 3), ("education", 4), ("marital-status", 6), ("occupation", 7),
         ("relationship", 8), ("race", 9), ("sex", 10), ("hours-per-week", 13), ("native-country", 14))
 
-      //code to run a forest
-//      val forest = randomForest(training, allFeatures)
-//      val testOutput = testing.map(x => (x(0), evaluateRandomForest(forest, x)))
-//      val trainOutput = training.map(x => (x(0), evaluateRandomForest(forest, x)))
-//      //Build tree on train Data
+      // Code to run a forest
+      // val forest = randomForest(training, allFeatures)
+      // val testOutput = testing.map(x => (x(0), evaluateRandomForest(forest, x)))
+      // val trainOutput = training.map(x => (x(0), evaluateRandomForest(forest, x)))
+      // Build tree on train Data
       val decisionTree = NewDecisionTree(maxDepth = 7)
       val parentNode = decisionTree.create_tree(training, 0, allFeatures, null)
 
-
-//      decisionTree.recursive_print(parentNode)
-      //Feed Test Data into Tree and get Results
+      // Feed Test Data into Tree and get Results
       val testOutput = testing.map(x => (x(0), decisionTree.evaluate(x, parentNode)))
       val trainOutput = training.map(x => (x(0), decisionTree.evaluate(x, parentNode)))
 
-
-      //computing F-Score for testAnswers
+      // Computing F-Score for testAnswers
       val joinedAnsOut = testAnswers.join(testOutput)
-//      joinedAnsOut.collect().foreach(println)
       val tp = joinedAnsOut
         .filter({ case (rownum, (actual, predicted)) => actual == predicted && actual == ">50K" }).collect().length
       val fp = joinedAnsOut
@@ -86,9 +79,8 @@ package FinalProject {
       println("Testing", "f: ", fscore, "accur: ", accuracy, "prec: ", precision, "rec: ", recall, tp, fp, fn, tn)
 
 
-      //computing F-Score for train Answers
+      // Computing F-Score for train Answers
       val joinedTrainAnsOut = trainAnswers.join(trainOutput)
-//      joinedTrainAnsOut.collect().foreach(println)
       val trtp = joinedTrainAnsOut
         .filter({ case (rownum, (actual, predicted)) => actual == predicted && actual.equals(">50K") }).collect().length
       val trfp = joinedTrainAnsOut
@@ -104,7 +96,6 @@ package FinalProject {
 
       val trfscore = 2 * (trprecision * trrecall) / (trprecision + trrecall)
       println("Training", "f: ", trfscore, "accur:", traccuracy,  "prec: ", trprecision, "rec: ", trrecall, trtp, trfp, trfn, trtn)
-//      decisionTree.recursive_print(parentNode, 5)
     }
 
     def getKeyFromPercentile(value: Int, percentiles: (Int, Int, Int)): String = {
@@ -125,11 +116,11 @@ package FinalProject {
       (featureVals((featureVals.length * 0.25).toInt), featureVals((featureVals.length * 0.5).toInt), featureVals((featureVals.length * 0.75).toInt))
     }
 
-    //all usable features is a length of 10. so the square root is 3, so we just need 3 random features
+    // All usable features is a length of 10. so the square root is 3, so we just need 3 random features
     def randomForest(data: RDD[Array[String]], features: Array[(String, Int)]): Array[(Array[(String, Int)], NewTreeNode)] = {
       val iterations = Array.range(1, 10)
       val decisionTree = NewDecisionTree(maxDepth = 5)
-      //      val featureCount = Math.sqrt(features.length * 1.0).toInt
+      // val featureCount = Math.sqrt(features.length * 1.0).toInt
       val featureSplits = iterations.map(x => getThreeRandomFeatures(features))
       featureSplits.foreach((x) => println(x.mkString(",")))
       featureSplits.map({ case subFeatures => (subFeatures, decisionTree.create_tree(data, 0, subFeatures, null)) })
